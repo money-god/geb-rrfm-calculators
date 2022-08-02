@@ -43,7 +43,6 @@ contract PIController is SafeMath, SignedSafeMath {
     }
 
     // What variable the controller is intended to control
-
     bytes32 public controlVariable;
     // This value is multiplied with the error
     int256 public kp;                                      // [EIGHTEEN_DECIMAL_NUMBER]
@@ -54,8 +53,6 @@ contract PIController is SafeMath, SignedSafeMath {
     int256 public outputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // The minimum output value
     int256 public outputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Use leak is 0, else no leak
-    //uint256 public noLeak;                     // [0 or 1]
 
     // Total number of error observations
     uint256 public numObservations;
@@ -72,7 +69,6 @@ contract PIController is SafeMath, SignedSafeMath {
     // Address that can update controller
     address public seedProposer;
 
-    //uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
     uint256 internal constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
     uint256 internal constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
     uint256 public constant RAY = 10 ** 27;
@@ -89,8 +85,6 @@ contract PIController is SafeMath, SignedSafeMath {
 
         require(outputUpperBound_ >= outputLowerBound_, "PIController/invalid-bounds");
         require(uint(importedState[0]) <= now, "PIController/invalid-imported-time");
-        //require(both(kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIController/invalid-kp");
-        //require(both(ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIController/invalid-ki");
 
         authorities[msg.sender]         = 1;
 
@@ -140,8 +134,6 @@ contract PIController is SafeMath, SignedSafeMath {
         }
     }
 
-
-
     // --- Administration ---
     /*
     * @notify Modify an address parameter
@@ -181,15 +173,12 @@ contract PIController is SafeMath, SignedSafeMath {
           outputLowerBound = val;
         }
         else if (parameter == "kp") {
-          //require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIController/invalid-kp");
           kp = val;
         }
         else if (parameter == "ki") {
-          //require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIController/invalid-ki");
           ki = val;
         }
         else if (parameter == "errorIntegral") {
-          //require(ki == 0, "PIController/cannot-set-errorIntegral");
           errorIntegral = val;
         }
         else revert("PIController/modify-unrecognized-param");
@@ -222,6 +211,7 @@ contract PIController is SafeMath, SignedSafeMath {
     /*
     * @notice If output has reached a bound, undo integral accumulation
     * @param boundedPiOutput The bounded output computed from the error and integral terms
+    * @param newErrorIntegral The updated errorIntegral, including the new area
     * @param newArea The new area that was already added to the integral that will subtracted if output has reached a bound
     */
     function clampErrorIntegral(int boundedPiOutput, int newErrorIntegral, int newArea) internal view returns (int256) {
@@ -244,7 +234,6 @@ contract PIController is SafeMath, SignedSafeMath {
         uint256 elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         int256 newTimeAdjustedError = multiply(riemannSum(error, lastError), int(elapsed));
 
-        //uint256 accumulatedLeak = (noLeak == 1) ? RAY : rpower(perSecondIntegralLeak, elapsed, RAY);
         uint256 accumulatedLeak = (perSecondIntegralLeak == 1E27) ? RAY : rpower(perSecondIntegralLeak, elapsed, RAY);
         int256 leakedErrorIntegral = divide(multiply(int(accumulatedLeak), errorIntegral), int(TWENTY_SEVEN_DECIMAL_NUMBER));
 
@@ -267,9 +256,7 @@ contract PIController is SafeMath, SignedSafeMath {
     * @notice Process a new error and return controller output
     * @param error The system error
     */
-    function update(
-      int error
-    ) external returns (int256, int256, int256) {
+    function update(int error) external returns (int256, int256, int256) {
         // Only the seed proposer can call this
         require(seedProposer == msg.sender, "PIController/invalid-msg-sender");
 
@@ -299,9 +286,6 @@ contract PIController is SafeMath, SignedSafeMath {
         (int newErrorIntegral, int newArea) = getNextErrorIntegral(error);
         (int piOutput, int pOutput, int iOutput) = getRawPiOutput(error, newErrorIntegral);
         int boundedPiOutput = getBoundedPiOutput(piOutput);
-
-        // If output has reached a bound, undo integral accumulation
-        //newErrorIntegral = clampErrorIntegral(boundedPiOutput, newErrorIntegral, newArea);
 
         return (boundedPiOutput, pOutput, iOutput);
 
