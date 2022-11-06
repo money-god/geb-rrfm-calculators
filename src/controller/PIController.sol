@@ -49,6 +49,9 @@ contract PIController is SafeMath, SignedSafeMath {
     // This value is multiplied with errorIntegral
     int256 public ki;                                      // [EIGHTEEN_DECIMAL_NUMBER]
 
+    // Controller output bias
+    int256 public coBias;                                  // [TWENTY_SEVEN_DECIMAL_NUMBER]
+
     // The maximum output value
     int256 public outputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // The minimum output value
@@ -77,6 +80,7 @@ contract PIController is SafeMath, SignedSafeMath {
         bytes32 controlVariable_,
         int256 kp_,
         int256 ki_,
+        int256 coBias_,
         uint256 perSecondIntegralLeak_,
         int256 outputUpperBound_,
         int256 outputLowerBound_,
@@ -91,6 +95,7 @@ contract PIController is SafeMath, SignedSafeMath {
         controlVariable = controlVariable_;
         kp = kp_;
         ki = ki_;
+        coBias = coBias_;
         perSecondIntegralLeak = perSecondIntegralLeak_;
         outputUpperBound = outputUpperBound_;
         outputLowerBound = outputLowerBound_;
@@ -178,6 +183,9 @@ contract PIController is SafeMath, SignedSafeMath {
         else if (parameter == "ki") {
           ki = val;
         }
+        else if (parameter == "coBias") {
+          coBias = val;
+        }
         else if (parameter == "errorIntegral") {
           errorIntegral = val;
         }
@@ -249,7 +257,7 @@ contract PIController is SafeMath, SignedSafeMath {
         // output = P + I = Kp * error + Ki * errorIntegral
         int pOutput = multiply(error, int(kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
         int iOutput = multiply(errorIntegral, int(ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
-        return (addition(pOutput, iOutput), pOutput, iOutput);
+        return (addition(coBias, addition(pOutput, iOutput)), pOutput, iOutput);
     }
 
     /*
