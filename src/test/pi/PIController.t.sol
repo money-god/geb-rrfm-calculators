@@ -17,6 +17,7 @@ contract PIControllerTest is DSTest {
 
     int256 Kp                                 = int(EIGHTEEN_DECIMAL_NUMBER);
     int256 Ki                                 = int(EIGHTEEN_DECIMAL_NUMBER);
+    int256 coBias                             = 0; 
     uint256 baseUpdateCallerReward            = 10 ether;
     uint256 maxUpdateCallerReward             = 30 ether;
     uint256 perSecondCallerRewardIncrease     = 1000002763984612345119745925;
@@ -35,6 +36,7 @@ contract PIControllerTest is DSTest {
         'test control variable',
         Kp,
         Ki,
+        coBias,
         perSecondIntegralLeak,
         outputUpperBound,
         outputLowerBound,
@@ -225,6 +227,23 @@ contract PIControllerTest is DSTest {
         (piOutput, pOutput, iOutput) =
           controller.getNextPiOutput(error);
         assertEq(piOutput, 0.005E27);
+        assertEq(controller.errorIntegral(), 0);
+    }
+    function test_first_get_output_with_bias() public {
+        int256 bias = int(TWENTY_SEVEN_DECIMAL_NUMBER);
+        controller.modifyParameters("coBias", bias);
+        assertEq(controller.errorIntegral(), 0);
+
+        int256 error = relative_error(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (int piOutput, int pOutput, int iOutput) =
+          controller.getNextPiOutput(error);
+        assertEq(piOutput, -0.05E27 + bias);
+        assertEq(controller.errorIntegral(), 0);
+
+        error = relative_error(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (piOutput, pOutput, iOutput) =
+          controller.getNextPiOutput(error);
+        assertEq(piOutput, 0.005E27 + bias);
         assertEq(controller.errorIntegral(), 0);
     }
     function test_first_positive_error() public {
@@ -659,7 +678,6 @@ contract PIControllerTest is DSTest {
     /*
     function test_big_delay_positive_deviation() public {
         assertEq(uint(controller.errorIntegral()), 0);
-        //controller.modifyParameters("nb", uint(0.995E18));
 
         hevm.warp(now + updateDelay);
 
@@ -680,7 +698,6 @@ contract PIControllerTest is DSTest {
     }
     function test_normalized_pi_result() public {
         assertEq(uint(controller.errorIntegral()), 0);
-        //controller.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER - 1);
 
         hevm.warp(now + updateDelay);
         orcl.updateTokenPrice(0.95E18);
@@ -723,7 +740,6 @@ contract PIControllerTest is DSTest {
     }
     function testFail_redemption_way_higher_than_market() public {
         assertEq(uint(controller.errorIntegral()), 0);
-        //controller.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER - 1);
 
         oracleRelayer.modifyParameters("redemptionPrice", FORTY_FIVE_DECIMAL_NUMBER * EIGHTEEN_DECIMAL_NUMBER);
 
