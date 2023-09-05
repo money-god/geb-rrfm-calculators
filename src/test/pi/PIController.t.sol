@@ -130,7 +130,6 @@ contract PIControllerTest is DSTest {
         assertEq(controller.controlVariable(), 'test control variable');
         assertEq(Kp, controller.kp());
         assertEq(Ki, controller.ki());
-        assertEq(controller.numObservations(), 0);
         assertEq(controller.elapsed(), 0);
     }
     function test_modify_parameters() public {
@@ -167,6 +166,26 @@ contract PIControllerTest is DSTest {
         assertEq(controller.outputLowerBound(), outputLowerBound);
         assertEq(controller.lastUpdateTime(), 0);
         assertEq(controller.errorIntegral(), 0);
+        assertEq(controller.lastError(), 0);
+        assertEq(controller.perSecondIntegralLeak(), perSecondIntegralLeak);
+        assertEq(Kp, controller.ki());
+        assertEq(Ki, controller.kp());
+        assertEq(controller.elapsed(), 0);
+    }
+    function test_get_output_nonzero_error() public {
+        (int piOutput, int pOutout, int iOutput) =
+          controller.getNextPiOutput(1);
+        assertEq(piOutput, 1);
+        assertEq(controller.errorIntegral(), 0);
+
+        // Verify that it did not change state
+        assertEq(controller.authorities(address(this)), 1);
+
+        assertEq(controller.outputUpperBound(), outputUpperBound);
+        assertEq(controller.outputLowerBound(), outputLowerBound);
+        assertEq(controller.lastUpdateTime(), 0);
+        assertEq(controller.errorIntegral(), 0);
+        assertEq(controller.lastError(), 0);
         assertEq(controller.perSecondIntegralLeak(), perSecondIntegralLeak);
         assertEq(Kp, controller.ki());
         assertEq(Ki, controller.kp());
@@ -291,6 +310,8 @@ contract PIControllerTest is DSTest {
         controller.modifyParameters("perSecondIntegralLeak", uint(0.999999999E27)); 
 
         // First update
+        // Need to update twice since first update doesn't create an error integral
+        // as elapsed time is 0
         hevm.warp(now + updateDelay);
         (int output, int pOutput, int iOutput) = controller.update(-0.0001E27);
         hevm.warp(now + updateDelay);
@@ -472,27 +493,23 @@ contract PIControllerTest is DSTest {
         controller.modifyParameters("seedProposer", address(this));
         hevm.warp(now + updateDelay);
         assertEq(controller.lastError(), 0);
-        assertEq(controller.numObservations(), 0);
 
         int256 error = relative_error(1.01E18, 1.00E27);
         assertEq(error, -0.01E27);
         (int256 output, int256 pOutput, int256 iOutput) = controller.update(error);
         assertEq(controller.lastError(), error);
-        assertEq(controller.numObservations(), 1);
 
         hevm.warp(now + updateDelay);
         error = relative_error(1.02E18, 1.00E27);
         assertEq(error, -0.02E27);
         (output, pOutput, iOutput) = controller.update(error);
         assertEq(controller.lastError(), error);
-        assertEq(controller.numObservations(), 2);
 
         hevm.warp(now + updateDelay);
         error = relative_error(0.95E18, 1.00E27);
         assertEq(error, 0.05E27);
         (output, pOutput, iOutput) = controller.update(error);
         assertEq(controller.lastError(), error);
-        assertEq(controller.numObservations(), 3);
 
     }
     function test_last_error_integral() public {
@@ -675,77 +692,6 @@ contract PIControllerTest is DSTest {
         assertEq(output, controller.outputUpperBound());
 
     }
-    /*
-    function test_big_delay_positive_deviation() public {
-        assertEq(uint(controller.errorIntegral()), 0);
-
-        hevm.warp(now + updateDelay);
-
-        orcl.updateTokenPrice(1.05E18);
-        rateSetter.updateRate(address(this));
-
-        hevm.warp(now + updateDelay * 10); // 10 hours
-        assertEq(oracleRelayer.redemptionPrice(), 1);
-
-        int256 error = relative_error(1.05E18, oracleRelayer.redemptionPrice());
-        (int piOutput, int pTerm, int iTerm) =
-          controller.getNextPiOutput(error);
-        assertEq(piOutput, -int(NEGATIVE_RATE_LIMIT));
-        assertEq(pTerm, -1049999999999999999999999999000000000000000000000000000);
-        assertEq(iTerm, -18899999999999999999999999982900000000000000000000000000000);
-
-        rateSetter.updateRate(address(this));
-    }
-    function test_normalized_pi_result() public {
-        assertEq(uint(controller.errorIntegral()), 0);
-
-        hevm.warp(now + updateDelay);
-        orcl.updateTokenPrice(0.95E18);
-
-        int256 error = relative_error(0.95E18, TWENTY_SEVEN_DECIMAL_NUMBER);
-        (int piOutput, int pTerm, int iTerm) =
-          controller.getNextPiOutput(error);
-        assertEq(piOutput, 0.05E27);
-        assertEq(pTerm, 0.05E27);
-        assertEq(iTerm, 0);
-
-        Kp = Kp / 4 / int(updateDelay * 24);
-        Ki = Ki / 4 / int(updateDelay ** 2) / 24;
-
-        assertEq(Kp, 2893518518518);
-        assertEq(Ki, 803755144);
-
-        controller.modifyParameters("kp", Kp);
-        controller.modifyParameters("ki", Ki);
-
-        (int output, int pOutput, int iOutput) = controller.getRawPiOutput(int(0.05E27), int(0));
-        assertEq(rawOutput, 144675925925900000000);
-
-        error = relative_error(0.95E18, TWENTY_SEVEN_DECIMAL_NUMBER);
-        (piOutput, pTerm, iTerm) =
-          controller.getNextPiOutput(error);
-        assertEq(piOutput, 1000000144675925925900000000 - 1E27);
-        assertEq(pTerm, 0.05E27);
-        assertEq(iTerm, 0);
-
-        rateSetter.updateRate(address(this));
-        hevm.warp(now + updateDelay);
-
-        error = relative_error(0.95E18, oracleRelayer.redemptionPrice());
-        (piOutput, pTerm, iTerm) =
-          controller.getNextPiOutput(error);
-        assertEq(piOutput, 1000000291498825809688551682 - 1E27);
-        assertEq(pTerm, 50494662801263695199553182);
-        assertEq(iTerm, 180890393042274651359195727600);
-    }
-    function testFail_redemption_way_higher_than_market() public {
-        assertEq(uint(controller.errorIntegral()), 0);
-
-        oracleRelayer.modifyParameters("redemptionPrice", FORTY_FIVE_DECIMAL_NUMBER * EIGHTEEN_DECIMAL_NUMBER);
-
-        rateSetter.updateRate(address(this));
-    }
-    */
     function test_correct_proportional_calculation() public {
         assertEq(uint(controller.errorIntegral()), 0);
 
@@ -754,7 +700,6 @@ contract PIControllerTest is DSTest {
         int256 error = relative_error(2.05E18, 2E27);
         (int output, int pOutput, int iOutput) =
           controller.getNextPiOutput(error);
-        //assertEq(piOutput, 0.975E27);
         assertEq(output, -0.025E27);
         assertEq(pOutput, -0.025E27);
         assertEq(iOutput, 0);
@@ -773,7 +718,6 @@ contract PIControllerTest is DSTest {
         (output, pOutput, iOutput) =
           controller.getNextPiOutput(error);
         assertEq(output, subtract(999999981915509259275000000, int(TWENTY_SEVEN_DECIMAL_NUMBER)));
-        //assertEq(pOutput, -0.025E27);
         assertEq(iOutput, 0);
 
         (output, pOutput, iOutput) = controller.getRawPiOutput(-int(0.025E27), int(0));
@@ -784,7 +728,6 @@ contract PIControllerTest is DSTest {
         (output, pOutput, iOutput) =
           controller.getNextPiOutput(error);
         assertEq(output, subtract(1000000018084490740725000000, int(TWENTY_SEVEN_DECIMAL_NUMBER)));
-        //assertEq(pOutput, 0.025E27);
         assertEq(iOutput, 0);
 
         (output, pOutput, iOutput) = controller.getRawPiOutput(int(0.025E27), int(0));
@@ -803,6 +746,7 @@ contract PIControllerTest is DSTest {
         (int piOutput, int pOutput, int iOutput) =
           controller.getNextPiOutput(error);
         assertEq(piOutput, 0);
+        assertEq(pOutput, 0);
         assertEq(controller.errorIntegral(), 0);
 
     }
