@@ -112,10 +112,9 @@ contract PIControllerTest is DSTest {
 
     function relative_error(uint256 measuredValue, uint256 referenceValue) internal pure returns (int256) {
         // measuredValue is WAD, referenceValue is a RAY
-        // Logic originally from scaled error calulation in rate calculator
+        // Logic from rate setter
 
         uint256 scaledMeasuredValue = multiply(measuredValue, 10**9);
-        // Calculate the proportional term as (redemptionPrice - marketPrice) * TWENTY_SEVEN_DECIMAL_NUMBER / redemptionPrice
         int256 relativeError = multiply(subtract(int(referenceValue), int(scaledMeasuredValue)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(referenceValue);
         return relativeError;
     }
@@ -135,16 +134,17 @@ contract PIControllerTest is DSTest {
     function test_modify_parameters() public {
         controller.modifyParameters("kp", int(1));
         controller.modifyParameters("ki", int(1));
-        controller.modifyParameters("outputUpperBound", int(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
-        controller.modifyParameters("outputLowerBound", -int(1));
-        controller.modifyParameters("perSecondIntegralLeak", uint(TWENTY_SEVEN_DECIMAL_NUMBER - 5));
-
-        assertEq(controller.outputUpperBound(), int(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
-        assertEq(controller.outputLowerBound(), -int(1));
-        assertEq(controller.perSecondIntegralLeak(), TWENTY_SEVEN_DECIMAL_NUMBER - 5);
-
         assertEq(int(1), controller.ki());
         assertEq(int(1), controller.kp());
+
+        controller.modifyParameters("outputUpperBound", int(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
+        controller.modifyParameters("outputLowerBound", -int(1));
+        assertEq(controller.outputUpperBound(), int(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
+        assertEq(controller.outputLowerBound(), -int(1));
+
+        controller.modifyParameters("perSecondIntegralLeak", uint(TWENTY_SEVEN_DECIMAL_NUMBER - 5));
+        assertEq(controller.perSecondIntegralLeak(), TWENTY_SEVEN_DECIMAL_NUMBER - 5);
+
     }
     function testFail_modify_parameters_upper_bound() public {
         controller.modifyParameters("outputUpperBound", controller.outputLowerBound() - 1);
@@ -152,7 +152,7 @@ contract PIControllerTest is DSTest {
     function testFail_modify_parameters_lower_bound() public {
         controller.modifyParameters("outputLowerBound", controller.outputUpperBound() + 1);
     }
-    function test_get_output_zero_error() public {
+    function test_get_next_output_zero_error() public {
         int256 error = relative_error(EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER);
         (int piOutput, int pOutout, int iOutput) =
           controller.getNextPiOutput(error);
@@ -172,7 +172,7 @@ contract PIControllerTest is DSTest {
         assertEq(Ki, controller.kp());
         assertEq(controller.elapsed(), 0);
     }
-    function test_get_output_nonzero_error() public {
+    function test_get_next_output_nonzero_error() public {
         (int piOutput, int pOutout, int iOutput) =
           controller.getNextPiOutput(1);
         assertEq(piOutput, 1);
@@ -233,9 +233,7 @@ contract PIControllerTest is DSTest {
         assertEq(initialErrorIntegral, controller.errorIntegral());
 
     }
-    function test_first_get_output() public {
-        assertEq(controller.errorIntegral(), 0);
-
+    function test_first_get_next_output() public {
         int256 error = relative_error(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         (int piOutput, int pOutput, int iOutput) =
           controller.getNextPiOutput(error);
@@ -248,7 +246,7 @@ contract PIControllerTest is DSTest {
         assertEq(piOutput, 0.005E27);
         assertEq(controller.errorIntegral(), 0);
     }
-    function test_first_get_output_with_bias() public {
+    function test_first_get_next_output_with_bias() public {
         int256 bias = int(TWENTY_SEVEN_DECIMAL_NUMBER);
         controller.modifyParameters("coBias", bias);
         assertEq(controller.errorIntegral(), 0);

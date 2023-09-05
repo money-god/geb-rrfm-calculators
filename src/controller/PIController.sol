@@ -57,9 +57,6 @@ contract PIController is SafeMath, SignedSafeMath {
     // The minimum output value
     int256 public outputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
 
-    // Total number of error observations
-    uint256 public numObservations;
-
     // The integral term (sum of error at each update call minus the leak applied at every call)
     int256 public errorIntegral;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // The last error 
@@ -93,7 +90,7 @@ contract PIController is SafeMath, SignedSafeMath {
         authorities[msg.sender]         = 1;
 
         controlVariable = controlVariable_;
-        kp = kp_;
+        kp = kp_; 
         ki = ki_;
         coBias = coBias_;
         perSecondIntegralLeak = perSecondIntegralLeak_;
@@ -250,8 +247,9 @@ contract PIController is SafeMath, SignedSafeMath {
 
     /*
     * @notice Apply Kp to the error and Ki to the error integral(by multiplication) and then sum P and I
-    * @param error The system error
-    * @param errorIntegral The calculated error integral
+    * @param error The system error TWENTY_SEVEN_DECIMAL_NUMBER
+    * @param errorIntegral The calculated error integral TWENTY_SEVEN_DECIMAL_NUMBER
+    * @return totalOutput, pOutput, iOutput TWENTY_SEVEN_DECIMAL_NUMBER
     */
     function getRawPiOutput(int error, int errorIntegral) public  view returns (int256, int256, int256) {
         // output = P + I = Kp * error + Ki * errorIntegral
@@ -262,7 +260,7 @@ contract PIController is SafeMath, SignedSafeMath {
 
     /*
     * @notice Process a new error and return controller output
-    * @param error The system error
+    * @param error The system error TWENTY_SEVEN_DECIMAL_NUMBER
     */
     function update(int error) external returns (int256, int256, int256) {
         // Only the seed proposer can call this
@@ -281,7 +279,6 @@ contract PIController is SafeMath, SignedSafeMath {
 
         lastUpdateTime = now;
         lastError = error;
-        numObservations += 1;
 
         return (boundedPiOutput, pOutput, iOutput);
 
