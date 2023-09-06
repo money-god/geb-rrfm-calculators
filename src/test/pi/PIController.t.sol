@@ -22,10 +22,7 @@ contract PIControllerTest is DSTest {
     uint256 maxUpdateCallerReward             = 30 ether;
     uint256 perSecondCallerRewardIncrease     = 1000002763984612345119745925;
     uint256 perSecondIntegralLeak           = 999997208243937652252849536; // 1% per hour
-    //int256 outputUpperBound          = int(TWENTY_SEVEN_DECIMAL_NUMBER) * int(EIGHTEEN_DECIMAL_NUMBER);
     int256 outputUpperBound          = 18640000000000000000;
-
-    //int256 outputLowerBound          = -int(TWENTY_SEVEN_DECIMAL_NUMBER - 1);
     int256 outputLowerBound          = -51034000000000000000;
 
     int256[] importedState = new int[](5);
