@@ -201,7 +201,7 @@ contract PIController is SafeMath, SignedSafeMath {
     * @notice Return bounded controller output
     * @param piOutput The raw output computed from the error and integral terms
     */
-    function getBoundedPiOutput(int piOutput) public  view returns (int256) {
+    function boundPiOutput(int piOutput) public  view returns (int256) {
         int boundedPIOutput = piOutput;
 
         if (piOutput < outputLowerBound) {
@@ -272,7 +272,7 @@ contract PIController is SafeMath, SignedSafeMath {
 
         (int256 piOutput, int256 pOutput, int256 iOutput) = getRawPiOutput(error, newErrorIntegral);
         
-        int256 boundedPiOutput = getBoundedPiOutput(piOutput);
+        int256 boundedPiOutput = boundPiOutput(piOutput);
 
         // If output has reached a bound, undo integral accumulation
         errorIntegral = clampErrorIntegral(boundedPiOutput, newErrorIntegral, newArea);
@@ -290,7 +290,7 @@ contract PIController is SafeMath, SignedSafeMath {
     function getNextPiOutput(int error) public view returns (int256, int256, int256) {
         (int newErrorIntegral, int newArea) = getNextErrorIntegral(error);
         (int piOutput, int pOutput, int iOutput) = getRawPiOutput(error, newErrorIntegral);
-        int boundedPiOutput = getBoundedPiOutput(piOutput);
+        int boundedPiOutput = boundPiOutput(piOutput);
 
         return (boundedPiOutput, pOutput, iOutput);
 
