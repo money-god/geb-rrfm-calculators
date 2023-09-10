@@ -288,7 +288,7 @@ contract PIController is SafeMath, SignedSafeMath {
     * @param error The system error
     */
     function getNextPiOutput(int error) public view returns (int256, int256, int256) {
-        (int newErrorIntegral, int newArea) = getNextErrorIntegral(error);
+        (int newErrorIntegral, int _) = getNextErrorIntegral(error);
         (int piOutput, int pOutput, int iOutput) = getRawPiOutput(error, newErrorIntegral);
         int boundedPiOutput = boundPiOutput(piOutput);
 
