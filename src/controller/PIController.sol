@@ -90,7 +90,7 @@ contract PIController is SafeMath, SignedSafeMath {
         authorities[msg.sender]         = 1;
 
         controlVariable = controlVariable_;
-        kp = kp_; 
+        kp = kp_;
         ki = ki_;
         coBias = coBias_;
         perSecondIntegralLeak = perSecondIntegralLeak_;
