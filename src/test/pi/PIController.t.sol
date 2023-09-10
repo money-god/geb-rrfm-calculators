@@ -154,7 +154,7 @@ contract PIControllerTest is DSTest {
     }
     function test_get_next_output_zero_error() public {
         int256 error = relative_error(EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER);
-        (int piOutput, int pOutout, int iOutput) =
+        (int piOutput,,) =
           controller.getNextPiOutput(error);
         assertEq(piOutput, 0);
         assertEq(controller.errorIntegral(), 0);
@@ -173,7 +173,7 @@ contract PIControllerTest is DSTest {
         assertEq(controller.elapsed(), 0);
     }
     function test_get_next_output_nonzero_error() public {
-        (int piOutput, int pOutout, int iOutput) =
+        (int piOutput,,) =
           controller.getNextPiOutput(1);
         assertEq(piOutput, Kp * 1/1E18);
         assertEq(controller.errorIntegral(), 0);
@@ -376,7 +376,7 @@ contract PIControllerTest is DSTest {
 
         int256 error = relative_error(1.01E18, 1.00E27);
         assertEq(error, -0.01E27);
-        (int256 output, int256 pOutput, int256 iOutput) = controller.update(error);
+        (int256 output, int256 pOutput,) = controller.update(error);
         assertEq(output, error * int(2.25E11)/ int(EIGHTEEN_DECIMAL_NUMBER));
         assertEq(output, pOutput);
     }
@@ -467,7 +467,7 @@ contract PIControllerTest is DSTest {
         // as elapsed time is set to 0
         int256 error1 = relative_error(1.01E18, 1.00E27);
         assertEq(error1, -0.01E27);
-        (int output1, int pOutput, int iOutput) = controller.update(error1);
+        (int output1,,) = controller.update(error1);
         int256 errorIntegral1 = controller.errorIntegral();
         assertEq(output1, error1 * controller.kp()/ int(EIGHTEEN_DECIMAL_NUMBER));
         assertEq(errorIntegral1, 0);
@@ -477,7 +477,7 @@ contract PIControllerTest is DSTest {
         // Second update
         int256 error2 = relative_error(1.01E18, 1.00E27);
         assertEq(error2, -0.01E27);
-        (int output2, int pOutput2, int iOutput2) = controller.update(error2);
+        (int output2,,) = controller.update(error2);
         int256 errorIntegral2 = controller.errorIntegral();
         assertEq(errorIntegral2, errorIntegral1 + (error1 + error2)/2 * int(updateDelay));
         assertEq(output2, error2 * controller.kp()/int(EIGHTEEN_DECIMAL_NUMBER) + 
@@ -488,7 +488,7 @@ contract PIControllerTest is DSTest {
         // Third update
         int256 error3 = relative_error(1.01E18, 1.00E27);
         assertEq(error3, -0.01E27);
-        (int output3, int pOutput3, int iOutput3) = controller.update(error3);
+        (int output3,,) = controller.update(error3);
         int256 errorIntegral3 = controller.errorIntegral();
         assertEq(errorIntegral3, errorIntegral2 + (error2 + error3)/2 * int(updateDelay));
         assertEq(output3, error3 * controller.kp()/int(EIGHTEEN_DECIMAL_NUMBER) + 
@@ -588,7 +588,7 @@ contract PIControllerTest is DSTest {
         assertEq(error, -0.01E27);
 
         // First error: small, output doesn't hit lower bound
-        (int256 output, int256 pOutput, int256 iOutput) = controller.update(error);
+        (int256 output,,) = controller.update(error);
         assert(output < 0);
         assert(output > controller.outputLowerBound());
         // Integral is zero for first error
@@ -602,7 +602,7 @@ contract PIControllerTest is DSTest {
         assertEq(newArea, -36000000000000000000000000000);
 
         // Second error: small, output doesn't hit lower bound
-        (int output2, int pOutput2, int iOutput2) = controller.update(error);
+        (int output2,,) = controller.update(error);
         assert(output2 < output);
         assert(output2 > controller.outputLowerBound());
         assertEq(controller.errorIntegral(), -36000000000000000000000000000);
@@ -613,7 +613,7 @@ contract PIControllerTest is DSTest {
         // Integral *does not* accumulate when it hits bound with same sign of current integral
         int256 hugeNegError = relative_error(1.6E18, 1.00E27);
 
-        (int output3, int pOutput3, int iOutput3) = controller.update(hugeNegError);
+        (int output3,,) = controller.update(hugeNegError);
         assertEq(output3, controller.outputLowerBound());
         // Integral doesn't accumulate
         assertEq(controller.errorIntegral(), -36000000000000000000000000000);
@@ -623,7 +623,7 @@ contract PIControllerTest is DSTest {
         // Integral *does* accumulate with a smaller error(doesn't hit output bound)
         int256 smallNegError = relative_error(1.01E18, 1.00E27);
 
-        (int output4, int pOutput4, int iOutput4) = controller.update(smallNegError);
+        (int output4,,) = controller.update(smallNegError);
         assert(controller.errorIntegral() < -36000000000000000000000000000);
         //assertEq(controller.errorIntegral(), -36000000000000000000000000000);
         assert(output4 > controller.outputLowerBound());
@@ -644,7 +644,7 @@ contract PIControllerTest is DSTest {
 
         assertEq(error, 0.000001E27);
 
-        (int256 output, int256 pOutput, int256 iOutput) = controller.update(error);
+        (int256 output,,) = controller.update(error);
         assert(output > 0);
         assert(output < controller.outputUpperBound());
         assertEq(controller.errorIntegral(), 0);
@@ -655,7 +655,7 @@ contract PIControllerTest is DSTest {
         assertEq(leakedIntegral, error * int(updateDelay));
         assertEq(newArea, error * int(updateDelay));
 
-        (int output2, int pOutput2, int iOutput2) = controller.update(error);
+        (int output2,,) = controller.update(error);
         assert(output2 > output);
         assertEq(controller.errorIntegral(), int(updateDelay) * error);
 
@@ -663,7 +663,7 @@ contract PIControllerTest is DSTest {
         int256 hugeNegError = relative_error(1, 1.00E27);
 
         hevm.warp(now + updateDelay);
-        (int output3, int pOutput3, int iOutput3) = controller.update(hugeNegError);
+        (int output3,,) = controller.update(hugeNegError);
         assertEq(output3, controller.outputUpperBound());
         assertEq(controller.errorIntegral(), int(updateDelay) * error);
 
@@ -671,7 +671,7 @@ contract PIControllerTest is DSTest {
         int256 smallPosError = relative_error(0.999999E18, 1.00E27);
 
         hevm.warp(now + updateDelay);
-        (int output4, int pOutput4, int iOutput4) = controller.update(smallPosError);
+        (int output4,,) = controller.update(smallPosError);
         assert(output4 < controller.outputUpperBound());
         //assert(controller.errorIntegral() > int(updateDelay) * error);
 
@@ -773,7 +773,7 @@ contract PIControllerTest is DSTest {
         int256 error = relative_error(1.05E18, 1.00E27);
         assertEq(error, -0.05E27);
 
-        (int piOutput, int pOutput, int iOutput) =
+        (int piOutput, int pOutput,) =
           controller.getNextPiOutput(error);
         assertEq(piOutput, 0);
         assertEq(pOutput, 0);

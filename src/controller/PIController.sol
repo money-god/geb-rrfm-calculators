@@ -251,10 +251,10 @@ contract PIController is SafeMath, SignedSafeMath {
     * @param errorIntegral The calculated error integral TWENTY_SEVEN_DECIMAL_NUMBER
     * @return totalOutput, pOutput, iOutput TWENTY_SEVEN_DECIMAL_NUMBER
     */
-    function getRawPiOutput(int error, int errorIntegral) public  view returns (int256, int256, int256) {
-        // output = P + I = Kp * error + Ki * errorIntegral
+    function getRawPiOutput(int error, int errorI) public  view returns (int256, int256, int256) {
+        // output = P + I = Kp * error + Ki * errorI
         int pOutput = multiply(error, int(kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
-        int iOutput = multiply(errorIntegral, int(ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
+        int iOutput = multiply(errorI, int(ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
         return (addition(coBias, addition(pOutput, iOutput)), pOutput, iOutput);
     }
 
@@ -288,7 +288,7 @@ contract PIController is SafeMath, SignedSafeMath {
     * @param error The system error
     */
     function getNextPiOutput(int error) public view returns (int256, int256, int256) {
-        (int newErrorIntegral, int _) = getNextErrorIntegral(error);
+        (int newErrorIntegral,) = getNextErrorIntegral(error);
         (int piOutput, int pOutput, int iOutput) = getRawPiOutput(error, newErrorIntegral);
         int boundedPiOutput = boundPiOutput(piOutput);
 
