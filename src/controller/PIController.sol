@@ -57,9 +57,6 @@ contract PIController is SafeMath, SignedSafeMath {
     // The minimum output value
     int256 public outputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
 
-    // Total number of error observations
-    uint256 public numObservations;
-
     // The integral term (sum of error at each update call minus the leak applied at every call)
     int256 public errorIntegral;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // The last error 
@@ -204,7 +201,7 @@ contract PIController is SafeMath, SignedSafeMath {
     * @notice Return bounded controller output
     * @param piOutput The raw output computed from the error and integral terms
     */
-    function getBoundedPiOutput(int piOutput) public  view returns (int256) {
+    function boundPiOutput(int piOutput) public  view returns (int256) {
         int boundedPIOutput = piOutput;
 
         if (piOutput < outputLowerBound) {
@@ -250,19 +247,20 @@ contract PIController is SafeMath, SignedSafeMath {
 
     /*
     * @notice Apply Kp to the error and Ki to the error integral(by multiplication) and then sum P and I
-    * @param error The system error
-    * @param errorIntegral The calculated error integral
+    * @param error The system error TWENTY_SEVEN_DECIMAL_NUMBER
+    * @param errorIntegral The calculated error integral TWENTY_SEVEN_DECIMAL_NUMBER
+    * @return totalOutput, pOutput, iOutput TWENTY_SEVEN_DECIMAL_NUMBER
     */
-    function getRawPiOutput(int error, int errorIntegral) public  view returns (int256, int256, int256) {
-        // output = P + I = Kp * error + Ki * errorIntegral
+    function getRawPiOutput(int error, int errorI) public  view returns (int256, int256, int256) {
+        // output = P + I = Kp * error + Ki * errorI
         int pOutput = multiply(error, int(kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
-        int iOutput = multiply(errorIntegral, int(ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
+        int iOutput = multiply(errorI, int(ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
         return (addition(coBias, addition(pOutput, iOutput)), pOutput, iOutput);
     }
 
     /*
     * @notice Process a new error and return controller output
-    * @param error The system error
+    * @param error The system error TWENTY_SEVEN_DECIMAL_NUMBER
     */
     function update(int error) external returns (int256, int256, int256) {
         // Only the seed proposer can call this
@@ -274,14 +272,13 @@ contract PIController is SafeMath, SignedSafeMath {
 
         (int256 piOutput, int256 pOutput, int256 iOutput) = getRawPiOutput(error, newErrorIntegral);
         
-        int256 boundedPiOutput = getBoundedPiOutput(piOutput);
+        int256 boundedPiOutput = boundPiOutput(piOutput);
 
         // If output has reached a bound, undo integral accumulation
         errorIntegral = clampErrorIntegral(boundedPiOutput, newErrorIntegral, newArea);
 
         lastUpdateTime = now;
         lastError = error;
-        numObservations += 1;
 
         return (boundedPiOutput, pOutput, iOutput);
 
@@ -291,9 +288,9 @@ contract PIController is SafeMath, SignedSafeMath {
     * @param error The system error
     */
     function getNextPiOutput(int error) public view returns (int256, int256, int256) {
-        (int newErrorIntegral, int newArea) = getNextErrorIntegral(error);
+        (int newErrorIntegral,) = getNextErrorIntegral(error);
         (int piOutput, int pOutput, int iOutput) = getRawPiOutput(error, newErrorIntegral);
-        int boundedPiOutput = getBoundedPiOutput(piOutput);
+        int boundedPiOutput = boundPiOutput(piOutput);
 
         return (boundedPiOutput, pOutput, iOutput);
 
