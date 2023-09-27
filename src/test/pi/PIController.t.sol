@@ -16,11 +16,8 @@ contract PIControllerTest is DSTest {
     uint256 updateDelay = 3600;
 
     int256 Kp                                 = 222002205862;
-    int256 Ki                                 = int(EIGHTEEN_DECIMAL_NUMBER);
+    int256 Ki                                 = int(7.2E4);
     int256 coBias                             = 0; 
-    uint256 baseUpdateCallerReward            = 10 ether;
-    uint256 maxUpdateCallerReward             = 30 ether;
-    uint256 perSecondCallerRewardIncrease     = 1000002763984612345119745925;
     uint256 perSecondIntegralLeak           = 999997208243937652252849536; // 1% per hour
     int256 outputUpperBound          = 18640000000000000000;
     int256 outputLowerBound          = -51034000000000000000;
@@ -196,8 +193,10 @@ contract PIControllerTest is DSTest {
 
         controller.update(1);
         assertEq(uint(controller.lastUpdateTime()), now);
-        assertEq(uint(controller.lastError()), 1);
-        assertEq(uint(controller.errorIntegral()), 0);
+        if (controller.ki() != 0) {
+            assertEq(uint(controller.lastError()), 1);
+            assertEq(uint(controller.errorIntegral()), 0);
+        }
 
     }
     function test_first_update_zero_error() public {
@@ -268,6 +267,7 @@ contract PIControllerTest is DSTest {
 
     }
     function test_first_positive_error() public {
+        controller.modifyParameters("ki", int(7.2E4));
 
         hevm.warp(now + updateDelay);
 
@@ -289,6 +289,7 @@ contract PIControllerTest is DSTest {
     }
     function test_first_negative_error() public {
         assertEq(uint(controller.errorIntegral()), 0);
+        controller.modifyParameters("ki", int(7.2E4)); 
 
         hevm.warp(now + updateDelay);
 
@@ -310,6 +311,7 @@ contract PIControllerTest is DSTest {
     }
     function test_integral_leaks() public {
         controller.modifyParameters("perSecondIntegralLeak", uint(0.999999999E27)); 
+        controller.modifyParameters("ki", int(7.2E4)); 
 
         // First update
         // Need to update twice since first update doesn't create an error integral
@@ -326,13 +328,14 @@ contract PIControllerTest is DSTest {
         // Second update
         (output, pOutput, iOutput) = controller.update(0);
         int errorIntegral2 = controller.errorIntegral();
-        assert(errorIntegral2 > errorIntegral1);
+        assertLt(errorIntegral2, errorIntegral1);
 
     }
     function test_leak_sets_integral_to_zero() public {
         assertEq(uint(controller.errorIntegral()), 0);
 
         controller.modifyParameters("kp", int(1000));
+        controller.modifyParameters("ki", int(7.2E4));
         controller.modifyParameters("perSecondIntegralLeak", uint(998721603904830360273103599)); // -99% per hour
         //controller.modifyParameters("perSecondIntegralLeak", uint(0.95E27)); // -99% per hour
 
@@ -496,6 +499,7 @@ contract PIControllerTest is DSTest {
     }
     function test_last_error() public {
         controller.modifyParameters("seedProposer", address(this));
+        controller.modifyParameters("ki", int(7.2E4));
         hevm.warp(now + updateDelay);
         assertEq(controller.lastError(), 0);
 

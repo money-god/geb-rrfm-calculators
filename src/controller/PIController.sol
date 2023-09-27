@@ -268,17 +268,24 @@ contract PIController is SafeMath, SignedSafeMath {
 
         require(now > lastUpdateTime, "PIController/wait-longer");
 
-        (int256 newErrorIntegral, int256 newArea) = getNextErrorIntegral(error);
+        int256 newErrorIntegral;
+        int256 newArea;
+
+        if (ki != 0) {
+            (newErrorIntegral, newArea) = getNextErrorIntegral(error);
+        }
 
         (int256 piOutput, int256 pOutput, int256 iOutput) = getRawPiOutput(error, newErrorIntegral);
         
         int256 boundedPiOutput = boundPiOutput(piOutput);
 
         // If output has reached a bound, undo integral accumulation
-        errorIntegral = clampErrorIntegral(boundedPiOutput, newErrorIntegral, newArea);
+        if (ki != 0) {
+            errorIntegral = clampErrorIntegral(boundedPiOutput, newErrorIntegral, newArea);
+            lastError = error;
+        }
 
         lastUpdateTime = now;
-        lastError = error;
 
         return (boundedPiOutput, pOutput, iOutput);
 
