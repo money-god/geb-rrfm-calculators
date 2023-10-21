@@ -383,6 +383,66 @@ contract PIControllerTest is DSTest {
         assertEq(output, error * int(2.25E11)/ int(EIGHTEEN_DECIMAL_NUMBER));
         assertEq(output, pOutput);
     }
+    function test_updates_zero_ki() public {
+        controller.modifyParameters("seedProposer", address(this));
+        controller.modifyParameters("kp", int(2.25E11));
+        controller.modifyParameters("ki", int(0));
+        hevm.warp(now + updateDelay);
+
+        int256 error = relative_error(1.01E18, 1.00E27);
+        assertEq(error, -0.01E27);
+        (int256 output, int256 pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+
+    }
+    function test_updates_nonzero_ki() public {
+        controller.modifyParameters("seedProposer", address(this));
+        controller.modifyParameters("kp", int(2.25E11));
+        controller.modifyParameters("ki", int(7.2E4));
+        hevm.warp(now + updateDelay);
+
+        int256 error = relative_error(1.01E18, 1.00E27);
+        assertEq(error, -0.01E27);
+        (int256 output, int256 pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+        (output, pOutput,) = controller.update(error);
+        hevm.warp(now + updateDelay);
+
+    }
     function test_get_next_error_integral() public {
         controller.modifyParameters("seedProposer", address(this));
         controller.modifyParameters("kp", int(2.25E11));
